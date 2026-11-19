@@ -1,0 +1,38 @@
+stages:
+  - build
+
+
+build_push_image:
+  stage: build
+  image: docker:29.4.3
+  needs: []
+  rules:
+    - changes:
+        - execution-environment/**/*
+        - ee.env
+  before_script:
+    - source ee.env
+    - export EE_IMAGE_TAG="a_${ANSIBLE_VERSION}-h_${HELM_VERSION}"
+    - apk add --no-cache python3 py3-pip
+    - python3 -m venv /opt/venv
+    - export PATH="/opt/venv/bin:$PATH"
+    - pip install --no-cache-dir ansible-builder
+    - cd execution-environment
+    - sed -i "s/__ANSIBLE_VERSION__/${ANSIBLE_VERSION}/g" execution-environment.yml
+    - sed -i "s/__HELM_VERSION__/v${HELM_VERSION}/g" execution-environment.yml
+    - sed -i "s/__HELM_DIFF_VERSION__/v${HELM_DIFF_VERSION}/g" execution-environment.yml
+  script:
+    - ansible-builder build -t ${EE_IMAGE_NAME}:${EE_IMAGE_TAG} --container-runtime docker
+    - docker tag ${EE_IMAGE_NAME}:${EE_IMAGE_TAG} ${CI_REGISTRY_IMAGE}/${EE_IMAGE_NAME}:${EE_IMAGE_TAG}
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker push ${CI_REGISTRY_IMAGE}/${EE_IMAGE_NAME}:${EE_IMAGE_TAG}
+
+#    - |
+#      if [ -n "$CI_COMMIT_TAG" ]; then
+#        docker tag ${EE_IMAGE_NAME}:${EE_IMAGE_TAG} ${CI_REGISTRY_IMAGE}/${EE_IMAGE_NAME}:${EE_IMAGE_TAG}
+#        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+#        docker push ${CI_REGISTRY_IMAGE}/${EE_IMAGE_NAME}:${EE_IMAGE_TAG}
+#      fi
+
+
+
