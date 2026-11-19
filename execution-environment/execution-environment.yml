@@ -53,3 +53,4 @@ additional_build_steps:
 
   append_final: |
     ENV HELM_PLUGINS="/usr/local/share/helm/plugins"
+
